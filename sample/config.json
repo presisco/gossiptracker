@@ -1,0 +1,62 @@
+{
+  "name": "gossip-tracker",
+  "nimbus": "localhost",
+  "workers": 1,
+  "spout_max_pending": 100,
+  "lifetime_minute": 60,
+  "data_source": {
+    "sqlite": {
+      "dataSourceClassName": "org.sqlite.SQLiteDataSource",
+      "dataSource.url": "jdbc:sqlite:gossip_dump.db",
+      "maximumPoolSize": "10"
+    }
+  },
+  "neo4j": {
+    "singleton": {
+      "uri": "bolt://localhost:7687",
+      "username": "neo4j",
+      "password": "experimental"
+    }
+  },
+  "topology": {
+    "kafka_spout": {
+      "type": "spout",
+      "class": "KafkaSpout",
+      "brokers": "rsync.kafka001.wd.sjs.ted:9092,rsync.kafka002.wd.sjs.ted:9092,rsync.kafka003.wd.sjs.ted:9092,rsync.kafka004.wd.sjs.ted:9092,rsync.kafka005.wd.sjs.ted:9092,rsync.kafka006.wd.sjs.ted:9092,rsync.kafka007.wd.sjs.ted:9092,rsync.kafka008.wd.sjs.ted:9092",
+      "topic": "businessCruise",
+      "key.deserializer": "org.apache.kafka.common.serialization.StringDeserializer",
+      "value.deserializer": "org.apache.kafka.common.serialization.StringDeserializer",
+      "parallelism": 1
+    },
+    "classifier": {
+      "type": "bolt",
+      "class": "com.presisco.gossiptracker.bolt.ContentClassifyBolt",
+      "upstream": "kafka_spout",
+      "sources": [
+        "tieba",
+        "weibo"
+      ],
+      "parallelism": 1
+    },
+    "micro_blog_rectifier": {
+      "type": "bolt",
+      "class": "com.presisco.gossiptracker.bolt.MicroBlogRectifyBolt",
+      "upstream": {
+        "classifier": "weibo"
+      },
+      "parallelism": 1
+    },
+    "neo4j_create_relation_bolt": {
+      "type": "bolt",
+      "class": "com.presisco.gossiptracker.bolt.MicroBlogWriteNodeBlot",
+      "upstream": {
+        "micro_blog_rectifier": [
+          "blog",
+          "comment"
+        ]
+      },
+      "neo4j": "singleton",
+      "parallelism": 1
+    }
+  }
+}
