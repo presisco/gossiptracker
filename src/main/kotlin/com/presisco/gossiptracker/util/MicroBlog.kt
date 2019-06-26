@@ -3,7 +3,8 @@ package com.presisco.gossiptracker.util
 object MicroBlog {
     val blogUrlRegex = "https://weibo\\.com/(.+?)/([A-Za-z0-9]{9}).*".toRegex()
     val userUrlIdRegex = "https://weibo\\.com/(.+)".toRegex()
-    val midRanges = listOf(0..0, 1..4, 5..8)
+    val decimalMidRange = listOf(0..1, 2..8, 9..15)
+    val codedMidRanges = listOf(0..0, 1..4, 5..8)
     val customRadixTable = listOf(
         '0', '1', '2', '3', '4', '5', '6',
         '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j',
@@ -23,6 +24,19 @@ object MicroBlog {
         return value.toString(10)
     }
 
+    fun String.toCustomBase(): String {
+        var value = this.toLong()
+
+        val bits = arrayListOf<Char>()
+        while (value > 0) {
+            val bitValue = (value % customRadix).toInt()
+            bits.add(0, customRadixTable[bitValue])
+            value /= customRadix
+        }
+
+        return bits.joinToString(separator = "")
+    }
+
     fun url2codedMid(url: String): String {
         val matchResult = blogUrlRegex.findAll(url).first()
         val codedMid = matchResult.groupValues[2]
@@ -32,7 +46,7 @@ object MicroBlog {
     fun url2mid(url: String): String {
         val codedMid = url2codedMid(url)
         val midBuilder = StringBuilder()
-        midRanges.forEach { midBuilder.append(codedMid.substring(it).fromCustomBase()) }
+        codedMidRanges.forEach { midBuilder.append(codedMid.substring(it).fromCustomBase()) }
         return midBuilder.toString()
     }
 
@@ -41,6 +55,14 @@ object MicroBlog {
         val uid = matchResult.groupValues[1]
         return uid
     }
+
+    fun encodeMid(value: String): String {
+        val codeBuilder = StringBuilder()
+        decimalMidRange.forEach { codeBuilder.append(value.substring(it).toCustomBase()) }
+        return codeBuilder.toString()
+    }
+
+    fun decodeMid(value: String) = value.fromCustomBase()
 
     fun uidFromUserUrl(url: String): String {
         val matchResult = userUrlIdRegex.findAll(url).first()

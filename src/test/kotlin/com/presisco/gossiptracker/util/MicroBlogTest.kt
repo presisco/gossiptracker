@@ -21,4 +21,9 @@ class MicroBlogTest {
         expect("someone") { MicroBlog.uidFromUserUrl("https://weibo.com/someone") }
     }
 
+    @Test
+    fun encodeTest() {
+        expect("Hxw65yJpU") { MicroBlog.encodeMid("4379882098277738") }
+    }
+
 }

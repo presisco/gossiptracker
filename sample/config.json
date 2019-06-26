@@ -7,8 +7,8 @@
   "data_source": {
     "sqlite": {
       "dataSourceClassName": "org.sqlite.SQLiteDataSource",
-      "dataSource.url": "jdbc:sqlite:gossip_dump.db",
-      "maximumPoolSize": "10"
+      "dataSource.url": "jdbc:sqlite:D:/weibo_dump.db",
+      "maximumPoolSize": "5"
     }
   },
   "neo4j": {
@@ -44,18 +44,33 @@
       "upstream": {
         "classifier": "weibo"
       },
+      "streams": [
+        "user",
+        "blog",
+        "comment"
+      ],
       "parallelism": 1
     },
     "neo4j_create_relation_bolt": {
       "type": "bolt",
       "class": "com.presisco.gossiptracker.bolt.MicroBlogWriteNodeBlot",
-      "upstream": {
-        "micro_blog_rectifier": [
-          "blog",
-          "comment"
-        ]
-      },
+      "upstream": "micro_blog_rectifier",
       "neo4j": "singleton",
+      "parallelism": 1
+    },
+    "micro_blog_dump": {
+      "type": "bolt",
+      "class": "SimpleReplaceBolt",
+      "upstream": "micro_blog_rectifier",
+      "data_source": "sqlite",
+      "timeout": 5,
+      "rollback": true,
+      "emit_on_failure": false,
+      "stream_table_map": {
+        "blog": "blog",
+        "comment": "comment"
+      },
+      "grouping": "shuffle",
       "parallelism": 1
     }
   }

@@ -87,6 +87,10 @@ class MicroBlogWriteNodeBlot : Neo4jResourceBolt<Map<String, Any?>>() {
     )
 
     override fun execute(tuple: Tuple, collector: BasicOutputCollector) {
+        if (!operationMap.containsKey(tuple.sourceStreamId)) {
+            return
+        }
+
         val info = getInput(tuple)
         val session = getSession()
         val trans = session.beginTransaction()

@@ -2,19 +2,20 @@ package com.presisco.gossiptracker.bolt
 
 import com.presisco.gossiptracker.util.MicroBlog
 import com.presisco.lazystorm.DATA_FIELD_NAME
-import com.presisco.lazystorm.bolt.LazyBasicBolt
+import com.presisco.lazystorm.getInt
 import com.presisco.lazystorm.getListOfMap
 import com.presisco.lazystorm.getString
 import org.apache.storm.topology.BasicOutputCollector
 import org.apache.storm.topology.OutputFieldsDeclarer
+import org.apache.storm.topology.base.BaseBasicBolt
 import org.apache.storm.tuple.Fields
 import org.apache.storm.tuple.Tuple
 import org.apache.storm.tuple.Values
 
-class MicroBlogRectifyBolt : LazyBasicBolt<Map<String, Any>>() {
+class MicroBlogRectifyBolt : BaseBasicBolt() {
 
     override fun execute(tuple: Tuple, collector: BasicOutputCollector) {
-        val data = getInput(tuple)
+        val data = tuple.getValue(0) as Map<String, *>
 
         try {
             if (!data.containsKey("content")) {
@@ -30,6 +31,11 @@ class MicroBlogRectifyBolt : LazyBasicBolt<Map<String, Any>>() {
                 "url" to data["__url"],
                 "id" to MicroBlog.url2codedMid(data.getString("__url")),
                 "uid" to MicroBlog.uidFromUserUrl(data.getString("user")),
+                "from" to data["from"],
+                "content" to data["content"],
+                "like" to data.getOrDefault("like", -1),
+                "comment" to data.getOrDefault("comment", -1),
+                "repost" to data.getOrDefault("repost", -1),
                 "create_time" to data["create_time"]
             )
 
@@ -45,9 +51,11 @@ class MicroBlogRectifyBolt : LazyBasicBolt<Map<String, Any>>() {
                     .map {
                         hashMapOf(
                             "blog_id" to rectifiedBlog.getString("id"),
-                            "id" to it.getString("comment_id"),
+                            "id" to MicroBlog.encodeMid(it.getString("comment_id")),
                             "uid" to MicroBlog.uidFromUserUrl(it.getString("user_link")),
-                            "create_time" to it.getString("create_time")
+                            "content" to it["content"],
+                            "like" to it.getInt("like"),
+                            "create_time" to it["create_time"]
                         )
                     }.forEach {
                         collector.emit("comment", Values(it))
