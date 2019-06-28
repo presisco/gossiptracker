@@ -1,14 +1,14 @@
 {
   "name": "gossip-tracker",
   "nimbus": "localhost",
-  "workers": 1,
+  "workers": 2,
   "spout_max_pending": 100,
   "lifetime_minute": 60,
   "data_source": {
     "sqlite": {
       "dataSourceClassName": "org.sqlite.SQLiteDataSource",
       "dataSource.url": "jdbc:sqlite:D:/weibo_dump.db",
-      "maximumPoolSize": "5"
+      "maximumPoolSize": "1"
     }
   },
   "neo4j": {
@@ -61,7 +61,12 @@
     "micro_blog_dump": {
       "type": "bolt",
       "class": "SimpleReplaceBolt",
-      "upstream": "micro_blog_rectifier",
+      "upstream": {
+        "micro_blog_rectifier": [
+          "blog",
+          "comment"
+        ]
+      },
       "data_source": "sqlite",
       "timeout": 5,
       "rollback": true,

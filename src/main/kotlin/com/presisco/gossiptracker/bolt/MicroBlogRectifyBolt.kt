@@ -2,7 +2,6 @@ package com.presisco.gossiptracker.bolt
 
 import com.presisco.gossiptracker.util.MicroBlog
 import com.presisco.lazystorm.DATA_FIELD_NAME
-import com.presisco.lazystorm.getInt
 import com.presisco.lazystorm.getListOfMap
 import com.presisco.lazystorm.getString
 import org.apache.storm.topology.BasicOutputCollector
@@ -54,7 +53,7 @@ class MicroBlogRectifyBolt : BaseBasicBolt() {
                             "id" to MicroBlog.encodeMid(it.getString("comment_id")),
                             "uid" to MicroBlog.uidFromUserUrl(it.getString("user_link")),
                             "content" to it["content"],
-                            "like" to it.getInt("like"),
+                            "like" to it.getOrDefault("like", -1),
                             "create_time" to it["create_time"]
                         )
                     }.forEach {
