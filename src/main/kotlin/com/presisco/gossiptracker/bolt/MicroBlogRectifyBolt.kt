@@ -16,53 +16,56 @@ class MicroBlogRectifyBolt : BaseBasicBolt() {
     override fun execute(tuple: Tuple, collector: BasicOutputCollector) {
         val data = tuple.getValue(0) as Map<String, *>
 
-        try {
-            if (!data.containsKey("content")) {
-                collector.emit("user", Values(data))
-                return
-            }
+        val rectifiedBlog = hashMapOf(
+            "url" to data["__url"],
+            "mid" to MicroBlog.url2codedMid(data.getString("__url")),
+            "uid" to MicroBlog.uidFromUserUrl(data.getString("user")),
+            "from" to data["from"],
+            "content" to data["content"],
+            "like" to data.getOrDefault("like", -1),
+            "comment" to data.getOrDefault("comment", -1),
+            "repost" to data.getOrDefault("repost", -1),
+            "create_time" to data["create_time"]
+        )
 
-            if (!data.containsKey("user")) {
-                return
-            }
+        if (data.containsKey("repost_link")) {
+            rectifiedBlog["repost_link"] = data["repost_link"]
+            rectifiedBlog["repost_id"] = MicroBlog.url2codedMid(data["repost_link"] as String)
+        }
 
-            val rectifiedBlog = hashMapOf(
-                "url" to data["__url"],
-                "id" to MicroBlog.url2codedMid(data.getString("__url")),
-                "uid" to MicroBlog.uidFromUserUrl(data.getString("user")),
-                "from" to data["from"],
-                "content" to data["content"],
-                "like" to data.getOrDefault("like", -1),
-                "comment" to data.getOrDefault("comment", -1),
-                "repost" to data.getOrDefault("repost", -1),
-                "create_time" to data["create_time"]
-            )
-
-            if (data.containsKey("repost_link")) {
-                rectifiedBlog["repost_link"] = data["repost_link"]
-                rectifiedBlog["repost_id"] = MicroBlog.url2codedMid(data["repost_link"] as String)
-            }
-
-            collector.emit("blog", Values(rectifiedBlog))
-            if (data.containsKey("comment_list")) {
-                data.getListOfMap("comment_list")
-                    .filter { it.containsKey("comment_id") }
-                    .map {
-                        hashMapOf(
-                            "blog_id" to rectifiedBlog.getString("id"),
-                            "id" to MicroBlog.encodeMid(it.getString("comment_id")),
-                            "uid" to MicroBlog.uidFromUserUrl(it.getString("user_link")),
-                            "content" to it["content"],
-                            "like" to it.getOrDefault("like", -1),
-                            "create_time" to it["create_time"]
+        collector.emit("blog", Values(rectifiedBlog))
+        if (data.containsKey("comment_list")) {
+            val rectifiedComments = data.getListOfMap("comment_list")
+                .filter {
+                    it.containsKey("comment_id")
+                            && MicroBlog.isValidTime(it.getString("create_time"))
+                }
+                .map {
+                    hashMapOf(
+                        "mid" to rectifiedBlog.getString("mid"),
+                        "cid" to MicroBlog.encodeMid(it.getString("comment_id")),
+                        "uid" to MicroBlog.uidFromUserUrl(it.getString("user_link")),
+                        "content" to it["content"],
+                        "like" to it.getOrDefault("like", -1),
+                        "create_time" to it["create_time"]
+                    )
+                }
+            collector.emit("comment", Values(rectifiedComments))
+        }
+        if (data.containsKey("tags")) {
+            data.getListOfMap("tags")
+                .filter {
+                    it.containsKey("text") &&
+                            it.getString("text") != "O网页链接"
+                }.forEach {
+                    collector.emit(
+                        "tag", Values(
+                            rectifiedBlog.getString("mid"),
+                            it.getString("text"),
+                            it.getString("link")
                         )
-                    }.forEach {
-                        collector.emit("comment", Values(it))
-                    }
-            }
-        } catch (e: Exception) {
-            e.printStackTrace()
-            throw e
+                    )
+                }
         }
     }
 
@@ -70,5 +73,6 @@ class MicroBlogRectifyBolt : BaseBasicBolt() {
         declarer.declareStream("blog", Fields(DATA_FIELD_NAME))
         declarer.declareStream("comment", Fields(DATA_FIELD_NAME))
         declarer.declareStream("user", Fields(DATA_FIELD_NAME))
+        declarer.declareStream("tag", Fields("mid", "name", "link"))
     }
 }

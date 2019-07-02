@@ -26,4 +26,9 @@ class MicroBlogTest {
         expect("Hxw65yJpU") { MicroBlog.encodeMid("4379882098277738") }
     }
 
+    @Test
+    fun timeValidationTest() {
+        expect(true) { MicroBlog.isValidTime("2018-01-01 08:00") }
+        expect(false) { MicroBlog.isValidTime("6月25日 14:23") }
+    }
 }

@@ -95,12 +95,7 @@ class MicroBlogWriteNodeBlot : Neo4jResourceBolt<Map<String, Any?>>() {
         val session = getSession()
         val trans = session.beginTransaction()
 
-        try {
-            operationMap[tuple.sourceStreamId]!!.invoke(trans, info)
-        } catch (e: Exception) {
-            e.printStackTrace()
-            throw e
-        }
+        operationMap[tuple.sourceStreamId]!!.invoke(trans, info)
 
         trans.success()
         session.close()

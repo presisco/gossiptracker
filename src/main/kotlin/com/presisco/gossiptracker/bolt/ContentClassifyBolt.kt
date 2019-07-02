@@ -29,7 +29,7 @@ class ContentClassifyBolt : LazyBasicBolt<String>(), Configurable {
 
     override fun prepare(topoConf: MutableMap<String, Any>?, context: TopologyContext?) {
         mapHelper = MapHelper()
-        matchers = sources.map { "https?://[A-Za-z\\d-_\\\\.]*?weibo[A-Za-z\\d-_\\\\.]*?/".toRegex() }
+        matchers = sources.map { "https?://[A-Za-z\\d-_\\\\.]*?$it[A-Za-z\\d-_\\\\.]*?/".toRegex() }
     }
 
     override fun execute(tuple: Tuple, collector: BasicOutputCollector) {
@@ -43,14 +43,20 @@ class ContentClassifyBolt : LazyBasicBolt<String>(), Configurable {
             }
         }
 
-        source?.let {
-            data["source"] = it
-            collector.emit(it, Values(data))
+        if (!data.containsKey("source")
+            || data.getString("source") != "weibo_network"
+        ) {
+            return
+        }
+
+        data["source"]?.let {
+            collector.emit(it as String, Values(data))
         }
     }
 
     override fun declareOutputFields(declarer: OutputFieldsDeclarer) {
         sources.forEach { declarer.declareStream(it, Fields(DATA_FIELD_NAME)) }
+        declarer.declareStream("weibo_network", Fields(DATA_FIELD_NAME))
     }
 
 }

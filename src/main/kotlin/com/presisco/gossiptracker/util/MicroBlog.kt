@@ -1,6 +1,8 @@
 package com.presisco.gossiptracker.util
 
 object MicroBlog {
+    val validTimeRegex = "\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}".toRegex()
+
     val blogUrlRegex = "https://weibo\\.com/(.+?)/([A-Za-z0-9]{9}).*".toRegex()
     val userUrlIdRegex = "https://weibo\\.com/(.+)".toRegex()
     val decimalMidRange = listOf(0..1, 2..8, 9..15)
@@ -69,4 +71,7 @@ object MicroBlog {
         val uid = matchResult.groupValues[1]
         return uid.replace("u/", "")
     }
+
+    fun isValidTime(timeString: String) = validTimeRegex.matches(timeString)
+
 }

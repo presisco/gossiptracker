@@ -1,7 +1,7 @@
 {
   "name": "gossip-tracker",
   "nimbus": "localhost",
-  "workers": 2,
+  "workers": 1,
   "spout_max_pending": 100,
   "lifetime_minute": 60,
   "data_source": {
@@ -9,6 +9,13 @@
       "dataSourceClassName": "org.sqlite.SQLiteDataSource",
       "dataSource.url": "jdbc:sqlite:D:/weibo_dump.db",
       "maximumPoolSize": "1"
+    },
+    "mysql": {
+      "dataSourceClassName": "com.mysql.cj.jdbc.MysqlDataSource",
+      "dataSource.url": "jdbc:mysql://localhost/gossip",
+      "dataSource.user": "root",
+      "dataSource.password": "!",
+      "maximumPoolSize": "5"
     }
   },
   "neo4j": {
@@ -26,7 +33,7 @@
       "topic": "businessCruise",
       "key.deserializer": "org.apache.kafka.common.serialization.StringDeserializer",
       "value.deserializer": "org.apache.kafka.common.serialization.StringDeserializer",
-      "parallelism": 1
+      "parallelism": 8
     },
     "classifier": {
       "type": "bolt",
@@ -51,23 +58,16 @@
       ],
       "parallelism": 1
     },
-    "neo4j_create_relation_bolt": {
-      "type": "bolt",
-      "class": "com.presisco.gossiptracker.bolt.MicroBlogWriteNodeBlot",
-      "upstream": "micro_blog_rectifier",
-      "neo4j": "singleton",
-      "parallelism": 1
-    },
     "micro_blog_dump": {
       "type": "bolt",
-      "class": "SimpleReplaceBolt",
+      "class": "WeiboReplaceBolt",
       "upstream": {
         "micro_blog_rectifier": [
           "blog",
           "comment"
         ]
       },
-      "data_source": "sqlite",
+      "data_source": "mysql",
       "timeout": 5,
       "rollback": true,
       "emit_on_failure": false,
@@ -75,6 +75,36 @@
         "blog": "blog",
         "comment": "comment"
       },
+      "grouping": "shuffle",
+      "parallelism": 1
+    },
+    "micro_blog_tag_creation": {
+      "type": "bolt",
+      "class": "com.presisco.gossiptracker.bolt.MicroBlogTagCreationBolt",
+      "upstream": {
+        "micro_blog_rectifier": "tag"
+      },
+      "data_source": "mysql",
+      "timeout": 5,
+      "rollback": true,
+      "emit_on_failure": false,
+      "map_capacity": 10000,
+      "table": "tag",
+      "grouping": "fields",
+      "group_params": [
+        "name"
+      ],
+      "parallelism": 2
+    },
+    "micro_blog_tag_write": {
+      "type": "bolt",
+      "class": "WeiboReplaceBolt",
+      "upstream": "micro_blog_tag_creation",
+      "data_source": "mysql",
+      "timeout": 5,
+      "rollback": true,
+      "emit_on_failure": false,
+      "table": "blog_tags",
       "grouping": "shuffle",
       "parallelism": 1
     }

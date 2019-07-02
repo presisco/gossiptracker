@@ -35,6 +35,12 @@
         </dependency>
 
         <dependency>
+            <groupId>mysql</groupId>
+            <artifactId>mysql-connector-java</artifactId>
+            <version>8.0.16</version>
+        </dependency>
+
+        <dependency>
             <groupId>org.apache.storm</groupId>
             <artifactId>storm-client</artifactId>
             <version>${storm.version}</version>
